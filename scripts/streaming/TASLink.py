@@ -36,6 +36,7 @@ prebuffer = 60
 ser = None
 supportedExtensions = ['r08','r16m'] # TODO: finish implementing this
 
+DUMMY_OFFSET = 0
 TASLINK_CONNECTED = 1  # set to 0 for development without TASLink plugged in, set to 1 for actual testing
 
 # important global variables to keep track of
@@ -184,7 +185,7 @@ class TASRun(object):
             working_string = customCommand
             for bytes in range(bytesPerCommand):
                 working_string += chr(0xFF)
-            buffer[frame] = working_string
+            buffer[DUMMY_OFFSET + frame] = working_string
 
         frameno = 0
         invertedfile = [""] * len(wholefile)
@@ -209,7 +210,7 @@ class TASRun(object):
                         pass # what is a four score?  would probably require a new file format in fact....
                     else: # normal controller
                         command_string += working_string[counter+1:counter+2]  # math not-so-magic
-                buffer[frameno+self.dummyFrames] = command_string
+                buffer[frameno if frameno < DUMMY_OFFSET else frameno+self.dummyFrames] = command_string
                 frameno += 1
         elif self.fileExtension == 'r16m':
             while True:
@@ -231,7 +232,7 @@ class TASRun(object):
                         command_string += working_string[(counter * 8) + 1:(counter * 8) + 9]  # math magic
                     else:
                         command_string += working_string[(counter * 8) + 1:(counter * 8) + 3]  # math magic
-                buffer[frameno+self.dummyFrames] = command_string
+                buffer[frameno if frameno < DUMMY_OFFSET else frameno+self.dummyFrames] = command_string
                 frameno += 1
 
         return buffer
@@ -525,9 +526,9 @@ class CLI(cmd.Cmd):
                 working_string += chr(0xFF)
 
             for count in range(difference):
-                runStatuses[index].inputBuffer.insert(0, working_string)  # add the correct number of blank input frames
+                runStatuses[index].inputBuffer.insert(DUMMY_OFFSET, working_string)  # add the correct number of blank input frames
         elif difference < 0:  # remove input frames
-            runStatuses[index].inputBuffer = runStatuses[index].inputBuffer[-difference:]
+            del runStatuses[index].inputBuffer[DUMMY_OFFSET : DUMMY_OFFSET - difference]
 
         runStatuses[index].isRunModified = True
 
